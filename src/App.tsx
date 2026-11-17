@@ -1,0 +1,83 @@
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { HashRouter, NavLink, Route, Routes, useLocation } from 'react-router-dom';
+import { lessons } from './lessons';
+import { Home } from './pages/Home';
+
+// Each lesson loads on demand, so the first page opens fast.
+const pages: Record<string, React.LazyExoticComponent<() => JSX.Element>> = {
+  basics: lazy(() => import('./pages/Basics')),
+  returns: lazy(() => import('./pages/Returns')),
+  diversification: lazy(() => import('./pages/Diversification')),
+  capm: lazy(() => import('./pages/Capm')),
+  construction: lazy(() => import('./pages/Construction')),
+  bonds: lazy(() => import('./pages/Bonds')),
+  allocation: lazy(() => import('./pages/Allocation')),
+  performance: lazy(() => import('./pages/Performance')),
+  risk: lazy(() => import('./pages/Risk')),
+  active: lazy(() => import('./pages/Active')),
+  career: lazy(() => import('./pages/Career')),
+};
+const Glossary = lazy(() => import('./pages/Glossary'));
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  // Braces matter: newer browsers return a value from scrollTo, and React would
+  // treat a returned value as a clean-up function and crash on the next page change.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+}
+
+export function App() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  return (
+    // HashRouter (#/returns) works on GitHub Pages without any server config.
+    <HashRouter>
+      <ScrollToTop />
+      <div className="app">
+        <aside className={`sidebar ${menuOpen ? 'open' : ''}`}>
+          <div className="brand">
+            <NavLink to="/" onClick={() => setMenuOpen(false)}>
+              <span className="brand-mark" aria-hidden>
+                ◔
+              </span>
+              Portfolio Management Lab
+            </NavLink>
+            <button className="menu-button" type="button" onClick={() => setMenuOpen((o) => !o)} aria-label="Toggle menu">
+              ☰
+            </button>
+          </div>
+          <nav className="nav">
+            <NavLink to="/" end onClick={() => setMenuOpen(false)}>
+              Overview
+            </NavLink>
+            {lessons.map((l) => (
+              <NavLink key={l.id} to={l.path} onClick={() => setMenuOpen(false)}>
+                <span className="nav-num">{l.number}</span>
+                {l.title}
+              </NavLink>
+            ))}
+            <NavLink to="/glossary" className="nav-extra" onClick={() => setMenuOpen(false)}>
+              <span className="nav-num">A–Z</span>
+              Glossary
+            </NavLink>
+          </nav>
+          <div className="sidebar-foot">Market assumptions are illustrative. Nothing here is investment advice.</div>
+        </aside>
+        <main className="content">
+          <Suspense fallback={<div className="loading">Loading lesson…</div>}>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/glossary" element={<Glossary />} />
+              {lessons.map((l) => {
+                const Page = pages[l.id];
+                return <Route key={l.id} path={l.path} element={<Page />} />;
+              })}
+            </Routes>
+          </Suspense>
+        </main>
+      </div>
+    </HashRouter>
+  );
+}
